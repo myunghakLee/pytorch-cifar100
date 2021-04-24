@@ -1,5 +1,5 @@
 # train.py
-#!/usr/bin/env	python3
+# !/usr/bin/env	python3
 
 """ train network using pytorch
 
@@ -26,15 +26,17 @@ from conf import settings
 from utils import get_network, get_training_dataloader, get_test_dataloader, WarmUpLR, \
     most_recent_folder, most_recent_weights, last_epoch, best_acc_weights
 
-def train(epoch):
-
+def train(epoch,random_shuffle):
+    data_num = 0
     start = time.time()
     net.train()
     for batch_index, (images, labels) in enumerate(cifar100_training_loader):
-
+        data_num += len(labels)
         if args.gpu:
             labels = labels.cuda()
             images = images.cuda()
+        R = random_shuffle[batch_index*len(labels): (batch_index+1)*len(labels)].cuda()
+        labels = (labels + R) % 100
 
         optimizer.zero_grad()
         outputs = net(images)
@@ -50,21 +52,20 @@ def train(epoch):
                 writer.add_scalar('LastLayerGradients/grad_norm2_weights', para.grad.norm(), n_iter)
             if 'bias' in name:
                 writer.add_scalar('LastLayerGradients/grad_norm2_bias', para.grad.norm(), n_iter)
-
-        print('Training Epoch: {epoch} [{trained_samples}/{total_samples}]\tLoss: {:0.4f}\tLR: {:0.6f}'.format(
-            loss.item(),
-            optimizer.param_groups[0]['lr'],
-            epoch=epoch,
-            trained_samples=batch_index * args.b + len(images),
-            total_samples=len(cifar100_training_loader.dataset)
-        ))
+        if batch_index % 1000 == 0:
+            print('Training Epoch: {epoch} [{trained_samples}/{total_samples}]\tLoss: {:0.4f}\tLR: {:0.6f}'.format(
+                loss.item(),
+                optimizer.param_groups[0]['lr'],
+                epoch=epoch,
+                trained_samples=batch_index * args.b + len(images),
+                total_samples=len(cifar100_training_loader.dataset)
+            ))
 
         #update training loss for each iteration
         writer.add_scalar('Train/loss', loss.item(), n_iter)
 
         if epoch <= args.warm:
             warmup_scheduler.step()
-
     for name, param in net.named_parameters():
         layer, attr = os.path.splitext(name)
         attr = attr[1:]
@@ -107,8 +108,16 @@ def eval_training(epoch=0, tb=True):
         correct.float() / len(cifar100_test_loader.dataset),
         finish - start
     ))
-    print()
 
+    f = open(args.save_dir + "/acc.txt", 'a')
+    f.write('Test set: Epoch: {}, Average loss: {:.4f}, Accuracy: {:.4f}, Time consumed:{:.2f}s\n'.format(
+        epoch,
+        test_loss / len(cifar100_test_loader.dataset),
+        correct.float() / len(cifar100_test_loader.dataset),
+        finish - start
+    ))
+    f.close()
+    
     #add informations to tensorboard
     if tb:
         writer.add_scalar('Test/Average loss', test_loss / len(cifar100_test_loader.dataset), epoch)
@@ -116,18 +125,26 @@ def eval_training(epoch=0, tb=True):
 
     return correct.float() / len(cifar100_test_loader.dataset)
 
+# +
+parser = argparse.ArgumentParser()
+parser.add_argument('-net', type=str, required=True, help='net type')
+parser.add_argument('-gpu', action='store_true', default=False, help='use gpu or not')
+parser.add_argument('-b', type=int, default=128, help='batch size for dataloader')
+parser.add_argument('-warm', type=int, default=1, help='warm up training phase')
+parser.add_argument('-lr', type=float, default=0.1, help='initial learning rate')
+parser.add_argument('-resume', action='store_true', default=False, help='resume training')
+parser.add_argument('--random_rate', type = float, default = 0.0)
+parser.add_argument('--save_dir', type = str, required = True)
+
+args = parser.parse_args()
+
+os.mkdir(args.save_dir)
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-net', type=str, required=True, help='net type')
-    parser.add_argument('-gpu', action='store_true', default=False, help='use gpu or not')
-    parser.add_argument('-b', type=int, default=128, help='batch size for dataloader')
-    parser.add_argument('-warm', type=int, default=1, help='warm up training phase')
-    parser.add_argument('-lr', type=float, default=0.1, help='initial learning rate')
-    parser.add_argument('-resume', action='store_true', default=False, help='resume training')
-    args = parser.parse_args()
 
+    
     net = get_network(args)
+    random_shuffle = (torch.rand(50000) > (1-args.random_rate)) * torch.randint(1, 100, (50000,))
 
     #data preprocessing:
     cifar100_training_loader = get_training_dataloader(
@@ -209,7 +226,7 @@ if __name__ == '__main__':
             if epoch <= resume_epoch:
                 continue
 
-        train(epoch)
+        train(epoch,random_shuffle)
         acc = eval_training(epoch)
 
         #start to save best performance model after learning rate decay to 0.01
