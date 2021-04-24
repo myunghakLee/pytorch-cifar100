@@ -35,9 +35,15 @@ def train(epoch,random_shuffle):
         if args.gpu:
             labels = labels.cuda()
             images = images.cuda()
+            
+            
         R = random_shuffle[batch_index*len(labels): (batch_index+1)*len(labels)].cuda()
         labels = (labels + R) % 100
 
+        
+        if args.random_every_epoch:
+            R = ((torch.rand(len(labels)) > (1-args.random_every_epoch_rate)) * torch.randint(1, 100, (len(labels),))).cuda()
+            labels = (labels + R) % 100
         optimizer.zero_grad()
         outputs = net(images)
         loss = loss_function(outputs, labels)
@@ -135,6 +141,11 @@ parser.add_argument('-lr', type=float, default=0.1, help='initial learning rate'
 parser.add_argument('-resume', action='store_true', default=False, help='resume training')
 parser.add_argument('--random_rate', type = float, default = 0.0)
 parser.add_argument('--save_dir', type = str, required = True)
+
+parser.add_argument('--random_every_epoch', action='store_true')
+parser.add_argument('--random_every_epoch_rate', type = float)
+
+
 
 args = parser.parse_args()
 
