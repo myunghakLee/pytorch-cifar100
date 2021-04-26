@@ -82,7 +82,7 @@ def train(epoch,random_shuffle):
     print('epoch {} training time consumed: {:.2f}s'.format(epoch, finish - start))
 
 @torch.no_grad()
-def eval_training(epoch=0, tb=True):
+def eval_training(epoch=0, tb=True, best = 0.0):
 
     start = time.time()
     net.eval()
@@ -116,12 +116,13 @@ def eval_training(epoch=0, tb=True):
     ))
 
     f = open(args.save_dir + "/acc.txt", 'a')
-    f.write('Test set: Epoch: {}, Average loss: {:.4f}, Accuracy: {:.4f}, Time consumed:{:.2f}s\n'.format(
+    f.write('Test set: Epoch: {}, Average loss: {:.4f}, Accuracy: {:.4f}, Time consumed:{:.2f}s'.format(
         epoch,
         test_loss / len(cifar100_test_loader.dataset),
         correct.float() / len(cifar100_test_loader.dataset),
         finish - start
     ))
+    f.write(f'\t best : {best}')
     f.close()
     
     #add informations to tensorboard
@@ -144,6 +145,7 @@ parser.add_argument('--save_dir', type = str, required = True)
 
 parser.add_argument('--random_every_epoch', action='store_true')
 parser.add_argument('--random_every_epoch_rate', type = float)
+parser.add_argument('--multiply_epoch', type = float, default = 1.0)
 
 
 
@@ -229,7 +231,7 @@ if __name__ == '__main__':
         resume_epoch = last_epoch(os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder))
 
 
-    for epoch in range(1, settings.EPOCH + 1):
+    for epoch in range(1, int((settings.EPOCH + 1)*args.multiply_epoch)):
         if epoch > args.warm:
             train_scheduler.step(epoch)
 
@@ -237,12 +239,12 @@ if __name__ == '__main__':
             if epoch <= resume_epoch:
                 continue
 
-        train(epoch,random_shuffle)
+        train(epoch,random_shuffle, best_acc)
         acc = eval_training(epoch)
 
         #start to save best performance model after learning rate decay to 0.01
-        if epoch > settings.MILESTONES[1] and best_acc < acc:
-            weights_path = checkpoint_path.format(net=args.net, epoch=epoch, type='best')
+        if  best_acc < acc:
+            weights_path = args.save_dir +"/best.pth"
             print('saving weights file to {}'.format(weights_path))
             torch.save(net.state_dict(), weights_path)
             best_acc = acc
@@ -254,3 +256,7 @@ if __name__ == '__main__':
             torch.save(net.state_dict(), weights_path)
 
     writer.close()
+# -
+
+for i in range((1,4.6)):
+    print(i)
