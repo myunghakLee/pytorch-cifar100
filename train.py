@@ -239,8 +239,8 @@ if __name__ == '__main__':
             if epoch <= resume_epoch:
                 continue
 
-        train(epoch,random_shuffle, best_acc)
-        acc = eval_training(epoch)
+        train(epoch,random_shuffle)
+        acc = eval_training(epoch, best_acc)
 
         #start to save best performance model after learning rate decay to 0.01
         if  best_acc < acc:
