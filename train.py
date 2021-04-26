@@ -122,7 +122,7 @@ def eval_training(epoch=0, tb=True, best = 0.0):
         correct.float() / len(cifar100_test_loader.dataset),
         finish - start
     ))
-    f.write(f'\t best : {best}')
+    f.write(f'\t best : {best}\n')
     f.close()
     
     #add informations to tensorboard
