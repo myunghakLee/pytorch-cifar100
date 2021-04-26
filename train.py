@@ -115,22 +115,14 @@ def eval_training(epoch=0, tb=True, best = 0.0):
         finish - start
     ))
 
-    f = open(args.save_dir + "/acc.txt", 'a')
-    f.write('Test set: Epoch: {}, Average loss: {:.4f}, Accuracy: {:.4f}, Time consumed:{:.2f}s'.format(
-        epoch,
-        test_loss / len(cifar100_test_loader.dataset),
-        correct.float() / len(cifar100_test_loader.dataset),
-        finish - start
-    ))
-    f.write(f'\t best : {best}\n')
-    f.close()
+    
     
     #add informations to tensorboard
     if tb:
         writer.add_scalar('Test/Average loss', test_loss / len(cifar100_test_loader.dataset), epoch)
         writer.add_scalar('Test/Accuracy', correct.float() / len(cifar100_test_loader.dataset), epoch)
 
-    return correct.float() / len(cifar100_test_loader.dataset)
+    return correct.float() / len(cifar100_test_loader.dataset), test_loss / len(cifar100_test_loader.dataset)
 
 # +
 parser = argparse.ArgumentParser()
@@ -218,7 +210,7 @@ if __name__ == '__main__':
             print('found best acc weights file:{}'.format(weights_path))
             print('load best training file to test acc...')
             net.load_state_dict(torch.load(weights_path))
-            best_acc = eval_training(tb=False)
+            best_acc, loss = eval_training(tb=False)
             print('best acc is {:0.2f}'.format(best_acc))
 
         recent_weights_file = most_recent_weights(os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder))
@@ -240,7 +232,7 @@ if __name__ == '__main__':
                 continue
 
         train(epoch,random_shuffle)
-        acc = eval_training(epoch, best_acc)
+        acc, loss = eval_training(epoch, best = float(best_acc))
 
         #start to save best performance model after learning rate decay to 0.01
         if  best_acc < acc:
@@ -248,13 +240,24 @@ if __name__ == '__main__':
             print('saving weights file to {}'.format(weights_path))
             torch.save(net.state_dict(), weights_path)
             best_acc = acc
-            continue
-
-        if not epoch % settings.SAVE_EPOCH:
+        
+        elif not epoch % settings.SAVE_EPOCH:
             weights_path = checkpoint_path.format(net=args.net, epoch=epoch, type='regular')
             print('saving weights file to {}'.format(weights_path))
             torch.save(net.state_dict(), weights_path)
 
+        print("=" * 500)
+        print(args.save_dir + "/acc.txt")
+        f = open(args.save_dir + "/acc.txt", 'a')
+        f.write('Test set: Epoch: {}, Average loss: {:.4f}, Accuracy: {:.4f}, BestAcc: {:.4f}\n'.format(
+            epoch,
+            loss,
+            float(acc),
+            float(best_acc)
+        ))
+        f.close()
+            
+            
     writer.close()
 # -
 
