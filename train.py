@@ -90,7 +90,7 @@ def train(epoch,random_shuffle):
     finish = time.time()
 
     print('epoch {} training time consumed: {:.2f}s'.format(epoch, finish - start))
-    return correct.float() / len(cifar100_test_loader.dataset), test_loss / len(cifar100_test_loader.dataset)    
+    return correct.float() / len(cifar100_training_loader.dataset), train_loss / len(cifar100_training_loader.dataset)    
     
 
 @torch.no_grad()
