@@ -29,6 +29,10 @@ from utils import get_network, get_training_dataloader, get_test_dataloader, War
 def train(epoch,random_shuffle):
     data_num = 0
     start = time.time()
+
+    train_loss = 0.0 # cost function error
+    correct = 0.0
+    
     net.train()
     for batch_index, (images, labels) in enumerate(cifar100_training_loader):
         data_num += len(labels)
@@ -50,6 +54,12 @@ def train(epoch,random_shuffle):
         loss.backward()
         optimizer.step()
 
+        train_loss += loss.item()
+        _, preds = outputs.max(1)
+        correct += preds.eq(labels).sum()
+        
+        
+        
         n_iter = (epoch - 1) * len(cifar100_training_loader) + batch_index + 1
 
         last_layer = list(net.children())[-1]
@@ -80,6 +90,8 @@ def train(epoch,random_shuffle):
     finish = time.time()
 
     print('epoch {} training time consumed: {:.2f}s'.format(epoch, finish - start))
+    return correct.float() / len(cifar100_test_loader.dataset), test_loss / len(cifar100_test_loader.dataset)    
+    
 
 @torch.no_grad()
 def eval_training(epoch=0, tb=True, best = 0.0):
@@ -138,6 +150,7 @@ parser.add_argument('--save_dir', type = str, required = True)
 parser.add_argument('--random_every_epoch', action='store_true')
 parser.add_argument('--random_every_epoch_rate', type = float)
 parser.add_argument('--multiply_epoch', type = float, default = 1.0)
+parser.add_argument('--random_seed', type = int, default = 0)
 
 
 
@@ -145,6 +158,7 @@ args = parser.parse_args()
 
 os.mkdir(args.save_dir)
 if __name__ == '__main__':
+    torch.manual_seed(args.random_seed)
 
 
     
@@ -231,7 +245,7 @@ if __name__ == '__main__':
             if epoch <= resume_epoch:
                 continue
 
-        train(epoch,random_shuffle)
+        train_Acc, train_loss = train(epoch,random_shuffle)
         acc, loss = eval_training(epoch, best = float(best_acc))
 
         #start to save best performance model after learning rate decay to 0.01
@@ -249,8 +263,10 @@ if __name__ == '__main__':
         print("=" * 500)
         print(args.save_dir + "/acc.txt")
         f = open(args.save_dir + "/acc.txt", 'a')
-        f.write('Test set: Epoch: {}, Average loss: {:.4f}, Accuracy: {:.4f}, BestAcc: {:.4f}\n'.format(
+        f.write('Test set: Epoch: {}, train loss: {:.4f}, train acc: {:.4f}, test loss: {:.4f}, test acc: {:.4f}, BestAcc: {:.4f}\n'.format(
             epoch,
+            train_loss,
+            float(train_Acc),
             loss,
             float(acc),
             float(best_acc)
