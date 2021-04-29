@@ -206,7 +206,7 @@ def get_training_dataloader(mean, std, batch_size=16, num_workers=2, shuffle=Tru
         transforms.Normalize(mean, std)
     ])
     #cifar100_training = CIFAR100Train(path, transform=transform_train)
-    cifar100_training = cifar.CIFAR100(root='./data', train=True, download=False, transform=transform_train, random_rate = random_rate)
+    cifar100_training = cifar.CIFAR100(root='./data', train=True, download=True, transform=transform_train, random_rate = random_rate)
 
     
     
