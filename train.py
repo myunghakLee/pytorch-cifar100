@@ -1,5 +1,7 @@
+# +
 # train.py
-# !/usr/bin/env	python3
+# # !/usr/bin/env	python3
+# -
 
 """ train network using pytorch
 
@@ -26,7 +28,11 @@ from conf import settings
 from utils import get_network, get_training_dataloader, get_test_dataloader, WarmUpLR, \
     most_recent_folder, most_recent_weights, last_epoch, best_acc_weights
 
-def train(epoch,random_shuffle):
+# +
+from torchvision.utils import save_image
+
+
+def train(epoch):
     data_num = 0
     start = time.time()
 
@@ -39,10 +45,10 @@ def train(epoch,random_shuffle):
         if args.gpu:
             labels = labels.cuda()
             images = images.cuda()
-            
-            
-        R = random_shuffle[batch_index*len(labels): (batch_index+1)*len(labels)].cuda()
-        labels = (labels + R) % 100
+
+
+#         R = random_shuffle[batch_index*len(labels): (batch_index+1)*len(labels)].cuda()
+#         labels = (labels + R) % 100
 
         
         if args.random_every_epoch:
@@ -91,7 +97,9 @@ def train(epoch,random_shuffle):
 
     print('epoch {} training time consumed: {:.2f}s'.format(epoch, finish - start))
     return correct.float() / len(cifar100_training_loader.dataset), train_loss / len(cifar100_training_loader.dataset)    
-    
+
+
+# -
 
 @torch.no_grad()
 def eval_training(epoch=0, tb=True, best = 0.0):
@@ -163,7 +171,7 @@ if __name__ == '__main__':
 
     
     net = get_network(args)
-    random_shuffle = (torch.rand(50000) > (1-args.random_rate)) * torch.randint(1, 100, (50000,))
+#     random_shuffle = (torch.rand(50000) > (1-args.random_rate)) * torch.randint(1, 100, (50000,))
 
     #data preprocessing:
     cifar100_training_loader = get_training_dataloader(
@@ -171,7 +179,8 @@ if __name__ == '__main__':
         settings.CIFAR100_TRAIN_STD,
         num_workers=4,
         batch_size=args.b,
-        shuffle=True
+        shuffle=True,
+        random_rate = args.random_rate
     )
 
     cifar100_test_loader = get_test_dataloader(
@@ -245,7 +254,7 @@ if __name__ == '__main__':
             if epoch <= resume_epoch:
                 continue
 
-        train_Acc, train_loss = train(epoch,random_shuffle)
+        train_Acc, train_loss = train(epoch)
         acc, loss = eval_training(epoch, best = float(best_acc))
 
         #start to save best performance model after learning rate decay to 0.01

@@ -1,19 +1,35 @@
+# +
 """ helper function
 
 author baiyu
 """
 import os
+import os.path
+import hashlib
+import gzip
+import errno
+import tarfile
+from typing import Any, Callable, List, Iterable, Optional, TypeVar
+import zipfile
+import torch
+from torch.utils.model_zoo import tqdm
+
+import os
 import sys
 import re
 import datetime
+import cifar
+# -
 
 import numpy
+
 
 import torch
 from torch.optim.lr_scheduler import _LRScheduler
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
+import torch
 
 
 def get_network(args):
@@ -163,7 +179,11 @@ def get_network(args):
     return net
 
 
-def get_training_dataloader(mean, std, batch_size=16, num_workers=2, shuffle=True):
+# +
+# torch.randint(1,100, (10,))
+# -
+
+def get_training_dataloader(mean, std, batch_size=16, num_workers=2, shuffle=True, random_rate = 0.0):
     """ return training dataloader
     Args:
         mean: mean of cifar100 training dataset
@@ -175,6 +195,8 @@ def get_training_dataloader(mean, std, batch_size=16, num_workers=2, shuffle=Tru
     Returns: train_data_loader:torch dataloader object
     """
 
+    
+
     transform_train = transforms.Compose([
         #transforms.ToPILImage(),
         transforms.RandomCrop(32, padding=4),
@@ -184,7 +206,10 @@ def get_training_dataloader(mean, std, batch_size=16, num_workers=2, shuffle=Tru
         transforms.Normalize(mean, std)
     ])
     #cifar100_training = CIFAR100Train(path, transform=transform_train)
-    cifar100_training = torchvision.datasets.CIFAR100(root='./data', train=True, download=True, transform=transform_train)
+    cifar100_training = cifar.CIFAR100(root='./data', train=True, download=False, transform=transform_train, random_rate = random_rate)
+
+    
+    
     cifar100_training_loader = DataLoader(
         cifar100_training, shuffle=shuffle, num_workers=num_workers, batch_size=batch_size)
 
