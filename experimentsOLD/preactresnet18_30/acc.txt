@@ -1,0 +1,4 @@
+Test set: Epoch: 1, Average loss: 0.0329, Accuracy: 0.0580, Time consumed:3.02s
+Test set: Epoch: 2, Average loss: 0.0294, Accuracy: 0.1281, Time consumed:2.98s
+Test set: Epoch: 3, Average loss: 0.0275, Accuracy: 0.1751, Time consumed:3.01s
+Test set: Epoch: 4, Average loss: 0.0258, Accuracy: 0.2047, Time consumed:2.98s
